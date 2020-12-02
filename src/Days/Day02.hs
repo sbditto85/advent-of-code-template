@@ -14,6 +14,8 @@ import qualified Util.Util as U
 import qualified Program.RunDay as R (runDay)
 import Data.Attoparsec.Text
 import Data.Void
+import Data.Text (Text)
+import qualified Data.Text as T
 {- ORMOLU_ENABLE -}
 
 runDay :: Bool -> String -> IO ()
@@ -21,19 +23,33 @@ runDay = R.runDay inputParser partA partB
 
 ------------ PARSER ------------
 inputParser :: Parser Input
-inputParser = error "Not implemented yet!"
+inputParser =
+  many1 $ (,,,) <$> decimal <*> (char '-' *> decimal <* anyChar) <*> (anyChar <* string ": ") <*> (takeTill isEndOfLine <* skipSpace)
 
 ------------ TYPES ------------
-type Input = Void
+type Input = [(Int, Int, Char, Text)]
 
-type OutputA = Void
+type OutputA = Int
 
-type OutputB = Void
+type OutputB = Int
 
 ------------ PART A ------------
 partA :: Input -> OutputA
-partA = error "Not implemented yet!"
+partA inputs =
+  length $ filter (\(min', max', char', password') ->
+                     let
+                       numChar = T.length $ T.filter (==char') password'
+                     in
+                       numChar >= min' && numChar <= max'
+                  ) inputs
 
 ------------ PART B ------------
 partB :: Input -> OutputB
-partB = error "Not implemented yet!"
+partB inputs =
+  length $ filter (\(slotOne, slotTwo, char', password') ->
+                     let
+                       slotOneHas = (T.index password' (slotOne - 1)) == char'
+                       slotTwoHas = (T.index password' (slotTwo - 1)) == char'
+                     in
+                       (slotOneHas && (not slotTwoHas)) || ((not slotOneHas) && slotTwoHas)
+                  ) inputs
