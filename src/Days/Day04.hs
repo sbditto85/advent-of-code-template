@@ -111,8 +111,8 @@ partB =
     hgtParser =
       (,) <$> decimal <*> choice [ string "cm", string "in" ]
     isValidHgt hgtTxt =
-      case parse hgtParser hgtTxt of
-        Done _ (number, typeTxt) -> if typeTxt == "cm" then
+      case parseOnly hgtParser hgtTxt of
+        Right (number, typeTxt) -> if typeTxt == "cm" then
                                       number >= 150 && number <= 193
                                     else if typeTxt == "in" then
                                       number >= 59 && number <= 76
@@ -123,11 +123,8 @@ partB =
     hclParser =
       char '#' *> takeWhile1 isHexDigit <* endOfInput
     isValidHcl hclTxt =
-      case parse hclParser hclTxt of
-        Done _ digits -> (T.length digits == 6)
-        Partial cont -> case cont "" of
-                          Done _ digits -> (T.length digits == 6)
-                          _ -> False
+      case parseOnly hclParser hclTxt of
+        Right digits -> (T.length digits == 6)
         _ -> False
 
     eclParser =
@@ -140,18 +137,15 @@ partB =
              , string "oth"
              ]
     isValidEcl eclTxt =
-      case parse eclParser eclTxt of
-        Done _ _ -> True
+      case parseOnly eclParser eclTxt of
+        Right _ -> True
         _ -> False
 
     pidParser =
       takeWhile1 isDigit <* endOfInput
     isValidPid pidTxt =
-      case parse pidParser pidTxt of
-        Done _ pid -> T.length pid == 9
-        Partial cont -> case cont "" of
-                          Done _ pid -> T.length pid == 9
-                          _ -> False
+      case parseOnly pidParser pidTxt of
+        Right pid -> T.length pid == 9
         _ -> False
 
   in
