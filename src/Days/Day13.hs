@@ -21,19 +21,69 @@ runDay = R.runDay inputParser partA partB
 
 ------------ PARSER ------------
 inputParser :: Parser Input
-inputParser = error "Not implemented yet!"
+inputParser =
+  BusInfo <$> (decimal <* skipSpace) <*> many1 (choice [ Just <$> (decimal <* option ',' (char ','))
+                                                       , char 'x' *> pure Nothing <* option ',' (char ',')
+                                                       ])
 
 ------------ TYPES ------------
-type Input = Void
 
-type OutputA = Void
+data BusInfo = BusInfo { earliest :: Int
+                       , buses :: [Maybe Int]
+                       } deriving (Show)
 
-type OutputB = Void
+type Input = BusInfo
+
+type OutputA = Int
+
+type OutputB = Int
 
 ------------ PART A ------------
 partA :: Input -> OutputA
-partA = error "Not implemented yet!"
+partA busInfo =
+  let
+    target = earliest busInfo
+
+    possibilities :: [(Int, Int)]
+    possibilities =
+      foldr (\next sofar ->
+               (next, (((target `div` next) + 1) * next) - target) : sofar
+            ) [] (catMaybes $ buses busInfo)
+
+    selection :: (Int, Int)
+    selection =
+      minimumBy (\(_, a) (_, b) -> compare a b) possibilities
+  in
+    (fst selection) * (snd selection)
 
 ------------ PART B ------------
 partB :: Input -> OutputB
-partB = error "Not implemented yet!"
+partB busInfo =
+  let
+    restraints =
+      fmap (\(minutesAfter, mBusNumber) ->
+              (minutesAfter, fromMaybe 0 mBusNumber)
+           ) $ filter (\(_, mVal) -> isJust mVal) $ zip [0..] (buses busInfo)
+
+    baseIteration =
+      snd . head $ restraints
+
+    iteration =
+      fmap (\mulBy -> mulBy * baseIteration) [1..]
+
+    toCheck =
+      drop 1 restraints
+
+    offsetMatches timestamp (offset, busNumber) =
+      (timestamp + offset) `mod` busNumber == 0
+
+    check timestamp =
+      and $ fmap (offsetMatches timestamp) toCheck
+
+    helper (t:ts) =
+      if check t then
+        t
+      else
+        helper ts
+  in
+    helper iteration
