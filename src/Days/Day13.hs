@@ -11,6 +11,7 @@ import Data.Vector (Vector)
 import qualified Data.Vector as Vec
 import qualified Util.Util as U
 
+import Debug.Trace (trace)
 import qualified Program.RunDay as R (runDay)
 import Data.Attoparsec.Text
 import Data.Void
@@ -39,7 +40,7 @@ type OutputA = Int
 type OutputB = Int
 
 ------------ PART A ------------
-partA :: Input -> OutputA
+partA :: Input -> OutputA -- 3246
 partA busInfo =
   let
     target = earliest busInfo
@@ -57,33 +58,58 @@ partA busInfo =
     (fst selection) * (snd selection)
 
 ------------ PART B ------------
-partB :: Input -> OutputB
+-- Needed some help and saw this https://en.wikipedia.org/wiki/Chinese_remainder_theorem#Search_by_sieving but did the code myself, pretty proud even though it took me WAY longer then i'll admit :D
+partB :: Input -> OutputB -- 1010182346291467
 partB busInfo =
   let
     restraints =
+      sortBy (\(a, _) (b, _) -> compare b a) $
       fmap (\(minutesAfter, mBusNumber) ->
-              (minutesAfter, fromMaybe 0 mBusNumber)
+              let
+                busNumber :: Int
+                busNumber =
+                  fromMaybe 0 mBusNumber
+
+                mod' :: Int
+                mod' =
+                  if minutesAfter == 0 then
+                    0
+                  else
+                    busNumber - (minutesAfter `mod` busNumber)
+              in
+                (mod', busNumber)
            ) $ filter (\(_, mVal) -> isJust mVal) $ zip [0..] (buses busInfo)
 
+    startNumber :: Int
+    startNumber =
+      fst . head $ trace ("restraints " ++ show restraints) restraints
+
+    baseIteration :: Int
     baseIteration =
-      snd . head $ restraints
-
-    iteration =
-      fmap (\mulBy -> mulBy * baseIteration) [1..]
-
-    toCheck =
-      drop 1 restraints
+      snd . head $ trace ("restraints " ++ show restraints) restraints
 
     offsetMatches timestamp (offset, busNumber) =
-      (timestamp + offset) `mod` busNumber == 0
+      timestamp `mod` busNumber == offset
 
-    check timestamp =
-      and $ fmap (offsetMatches timestamp) toCheck
+    checkNext timestamp toCheck =
+      offsetMatches timestamp toCheck
 
-    helper (t:ts) =
-      if check t then
-        t
+    helper :: Int -> Int -> [(Int, Int)] -> Int
+    helper _ t [] = t
+    helper i t toCheck'@(next:toCheck) =
+      if checkNext t next then
+        if toCheck == [] then
+          t
+        else
+          trace ( "Going from " ++ show next ++
+                  " which incremented by " ++ show i ++
+                  " to increment by " ++ show (i * snd next) ++
+                  " at t " ++ show t
+                ) $ helper (i * snd next) (t + (i * snd next)) toCheck
       else
-        helper ts
+        trace ( "Continuing " ++ show next ++
+                " incrementing by " ++ show i  ++
+                " at t " ++ show t
+              ) $ helper i (t + i) toCheck'
   in
-    helper iteration
+    helper baseIteration startNumber (drop 1 restraints)
